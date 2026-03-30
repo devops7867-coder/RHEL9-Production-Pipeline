@@ -2,7 +2,7 @@ pipeline {
     agent any
     triggers { pollSCM('H/2 * * * *') }
     environment {
-        APP_SERVER = "192.168.56.104" 
+        APP_SERVER = "192.168.56.106" 
         IMAGE_NAME = "docker.io/muhammadisabir/rhel9-app"
         SSH_CRED_ID = "vm2-ssh-key"
         DOCKER_CRED_ID = "dockerhub-creds"
