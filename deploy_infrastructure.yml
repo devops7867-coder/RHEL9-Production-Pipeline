@@ -1,0 +1,75 @@
+---
+- name: 🚀 Master CI/CD Infrastructure Setup
+  hosts: all
+  become: yes
+  tasks:
+    - name: 🛠 Update all packages and install Base Tools
+      dnf:
+        name: [git, curl, wget, vim, openssh-server, firewalld, container-tools]
+        state: latest
+
+    - name: 🔥 Ensure Firewall is running
+      systemd: { name: firewalld, state: started, enabled: yes }
+
+# --- VM1: JENKINS CONFIGURATION ---
+- name: 🏗 Configure Jenkins Server (VM1)
+  hosts: jenkins_server
+  become: yes
+  tasks:
+    - name: ☕ Install Java 21
+      dnf: { name: java-21-openjdk, state: present }
+
+    - name: 📦 Add Jenkins Repository
+      get_url:
+        url: https://pkg.jenkins.io/redhat-stable/jenkins.repo
+        dest: /etc/yum.repos.d/jenkins.repo
+
+    - name: 🔑 Import Jenkins GPG Key
+      rpm_key: { key: https://pkg.jenkins.io/redhat-stable/jenkins.io-2023.key, state: present }
+
+    - name: 📥 Install and Start Jenkins
+      dnf: { name: jenkins, state: present }
+
+    - name: 🔓 Open Jenkins Port 8080
+      shell: |
+        firewall-cmd --permanent --add-port=8080/tcp
+        firewall-cmd --reload
+
+    - name: ▶️ Start Jenkins Service
+      systemd: { name: jenkins, state: started, enabled: yes }
+
+# --- VM2: APP SERVER & NGINX CONFIGURATION ---
+- name: 🌐 Configure App Server & Nginx (VM2)
+  hosts: app_server
+  become: yes
+  tasks:
+    - name: 📦 Install EPEL Repository
+      dnf:
+        name: https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm
+        state: present
+        disable_gpg_check: yes
+
+    - name: ⚙️ Enable CodeReady Builder (CRB) Repository
+      shell: |
+        ARCH=$(uname -m)
+        subscription-manager repos --enable "codeready-builder-for-rhel-9-${ARCH}-rpms" || dnf config-manager --set-enabled crb || true
+
+    - name: 📥 Install Nginx and Certbot
+      dnf:
+        name: [nginx, certbot, python3-certbot-nginx]
+        state: present
+
+    - name: ⚙️ Deploy Nginx Reverse Proxy Config
+      template:
+        src: nginx_proxy.conf.j2
+        dest: /etc/nginx/conf.d/cicd_app.conf
+
+    - name: 🔓 Open HTTP/HTTPS/App Ports
+      shell: |
+        firewall-cmd --permanent --add-service=http
+        firewall-cmd --permanent --add-service=https
+        firewall-cmd --permanent --add-port=5000/tcp
+        firewall-cmd --reload
+
+    - name: ▶️ Start Nginx Service
+      systemd: { name: nginx, state: restarted, enabled: yes }
