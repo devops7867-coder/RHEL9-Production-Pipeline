@@ -3,7 +3,7 @@ pipeline {
     triggers { pollSCM('H/2 * * * *') }
     environment {
         APP_SERVER = "192.168.56.104" 
-        IMAGE_NAME = "docker.io/devops7867-coder/rhel9-app"
+        IMAGE_NAME = "docker.io/muhammadisabir/rhel9-app"
         SSH_CRED_ID = "vm2-ssh-key"
         DOCKER_CRED_ID = "dockerhub-creds"
     }
